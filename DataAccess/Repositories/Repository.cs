@@ -1,4 +1,5 @@
-﻿using DataAccess.Paging;
+﻿using DataAccess.Dynamic;
+using DataAccess.Paging;
 using Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
@@ -7,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DataAccess.Repositories
@@ -15,84 +17,149 @@ namespace DataAccess.Repositories
         where TEntity : BaseEntity
         where TContext : DbContext
     {
+
+        protected TContext Context { get; set; }
+
+        public Repository(TContext context)
+        {
+            Context= context;
+        }
         public TEntity Add(TEntity entity)
         {
-            throw new NotImplementedException();
+            Context.Entry(entity).State = EntityState.Added;
+            Context.SaveChanges();
+            return entity;
         }
 
-        public Task<TEntity> AddAsync(TEntity entity)
+        public async Task<TEntity> AddAsync(TEntity entity)
         {
-            throw new NotImplementedException();
+            Context.Entry(entity).State = EntityState.Added;
+            await Context.SaveChangesAsync();
+            return entity;
         }
 
         public bool Any(Expression<Func<TEntity, bool>> predicate)
         {
-            throw new NotImplementedException();
+            return Query().Any(predicate);
         }
 
-        public Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate)
+        public async Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate)
         {
-            throw new NotImplementedException();
+            return await Query().AnyAsync(predicate);
         }
 
         public TEntity Delete(TEntity entity)
         {
-            throw new NotImplementedException();
+            Context.Entry(entity).State= EntityState.Deleted;
+            Context.SaveChanges();
+            return entity;
         }
 
-        public Task<TEntity> DeleteAsync(TEntity entity)
+        public async Task<TEntity> DeleteAsync(TEntity entity)
         {
-            throw new NotImplementedException();
+            Context.Entry(entity).State = EntityState.Deleted;
+            await Context.SaveChangesAsync();
+            return entity;
         }
 
         public TEntity? Get(Expression<Func<TEntity, bool>> predicate, params Expression<Func<TEntity, object>>[] includes)
         {
-            throw new NotImplementedException();
+            var query = Query();
+            if (includes.Any())
+                query = includes.Aggregate(query,(current, expression) => current.Include(expression));
+
+            var entity = query.FirstOrDefault(predicate);
+
+            if (entity == null)
+                return null;
+
+            Context.Entry(entity).State = EntityState.Detached;
+            return entity;
+
         }
 
-        public Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, params Expression<Func<TEntity, object>>[] includes)
+        public async Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, params Expression<Func<TEntity, object>>[] includes)
         {
-            throw new NotImplementedException();
+            var query = Query();
+            if (includes.Any())
+                query = includes.Aggregate(query,(current,expression)=> current.Include(expression));
+            var entity = await query.FirstOrDefaultAsync(predicate);
+            if (entity == null)
+                return null;
+            Context.Entry(entity).State= EntityState.Detached;
+            return entity;
+          
         }
 
-        public Task<IList<TEntity>> GetFullListAsync(Expression<Func<TEntity, bool>>? predicate = null, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, bool enableTracking = true, CancellationToken cancellationToken = default)
+        public async Task<IList<TEntity>> GetFullListAsync(Expression<Func<TEntity, bool>>? predicate = null, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, bool enableTracking = true, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            IQueryable<TEntity> queryable = Query();
+            if (!enableTracking) queryable = queryable.AsNoTracking();
+            if (include != null) queryable = include(queryable);
+            if(predicate != null) queryable = queryable.Where(predicate);
+            if(orderBy != null)
+                return await orderBy(queryable).ToListAsync(cancellationToken);
+            return await queryable.ToListAsync(cancellationToken);  
         }
 
-        public Task<IPaginate<TEntity>> GetList(Expression<Func<TEntity, bool>>? predicate = null, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool enableTracking = true)
+        public async Task<IPaginate<TEntity>> GetList(Expression<Func<TEntity, bool>>? predicate = null, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool enableTracking = true)
         {
-            throw new NotImplementedException();
+            IQueryable<TEntity> queryable = Query();
+            if(!enableTracking) queryable = queryable.AsNoTracking();
+            if(include != null) queryable = include(queryable);
+            if (predicate != null) queryable = queryable.Where(predicate);
+            if (orderBy != null)
+                return orderBy(queryable).ToPaginate(index, size);
+            return queryable.ToPaginate(index, size);
         }
 
-        public Task<IPaginate<TEntity>> GetListAsync(Expression<Func<TEntity, bool>>? predicate = null, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool enableTracking = true, CancellationToken cancellationToken = default)
+        public async Task<IPaginate<TEntity>> GetListAsync(Expression<Func<TEntity, bool>>? predicate = null, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool enableTracking = true, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            IQueryable<TEntity> queryable = Query();
+            if (!enableTracking) queryable = queryable.AsNoTracking();
+            if (include != null) queryable = include(queryable);
+            if (predicate != null) queryable = queryable.Where(predicate);
+            if (orderBy != null)
+                return await orderBy(queryable).ToPaginateAsync(index, size, 0, cancellationToken);
+            return await queryable.ToPaginateAsync(index, size, 0, cancellationToken);
+        }
+        
+
+        public async Task<IPaginate<TEntity>> GetListByDynamic(Dynamic.Dynamic dynamic, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool enableTracking = true)
+        {
+            IQueryable<TEntity> queryable = Query().AsQueryable().ToDynamic(dynamic);
+            if (!enableTracking) queryable = queryable.AsNoTracking();
+            if (include != null) queryable = include(queryable);
+            return queryable.ToPaginate(index, size);
         }
 
-        public Task<IPaginate<TEntity>> GetListByDynamic(Dynamic.Dynamic dynamic, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool enableTracking = true)
+        public async Task<IPaginate<TEntity>> GetListByDynamicAsync(Dynamic.Dynamic dynamic, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool enableTracking = true, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
-        }
-
-        public Task<IPaginate<TEntity>> GetListByDynamicAsync(Dynamic.Dynamic dynamic, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool enableTracking = true, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
+            IQueryable<TEntity> queryable = Query().AsQueryable().ToDynamic(dynamic);
+            if (!enableTracking) queryable = queryable.AsNoTracking();
+            if (include != null) queryable = include(queryable);
+            return await queryable.ToPaginateAsync(index, size, 0, cancellationToken);
         }
 
         public IQueryable<TEntity> Query()
         {
-            throw new NotImplementedException();
+            return Context.Set<TEntity>();
         }
 
         public TEntity Update(TEntity entity)
         {
-            throw new NotImplementedException();
+            Context.Entry(entity).State = EntityState.Modified;
+            Context.SaveChanges();
+            return entity;
         }
 
-        public Task<TEntity> UpdateAsync(TEntity entity)
+        public async Task<TEntity> UpdateAsync(TEntity entity)
         {
-            throw new NotImplementedException();
+            Context.Entry(entity).State = EntityState.Modified;
+            await Context.SaveChangesAsync();
+            return entity;
         }
+
+        
     }
 }
