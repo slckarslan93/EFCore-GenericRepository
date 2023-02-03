@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+
 namespace DataAccess.Paging
 {
     public static class IQueryablePaginateExtensions
@@ -22,7 +23,6 @@ namespace DataAccess.Paging
             };
             return list;
         }
-
 
         public static IPaginate<T> ToPaginate<T>(this IQueryable<T> source, int index, int size,
                                                  int from = 0)

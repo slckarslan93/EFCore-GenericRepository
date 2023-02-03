@@ -3,7 +3,6 @@ using Entities;
 using Microsoft.EntityFrameworkCore.Query;
 using System.Linq.Expressions;
 
-
 namespace DataAccess.Repositories
 {
     public interface IRepository<TEntity>
@@ -40,7 +39,5 @@ namespace DataAccess.Repositories
         bool Any(Expression<Func<TEntity, bool>> predicate);
 
         Task<IList<TEntity>> GetFullListAsync(Expression<Func<TEntity, bool>>? predicate = null, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, bool enableTracking = true, CancellationToken cancellationToken = default);
-
-
     }
 }

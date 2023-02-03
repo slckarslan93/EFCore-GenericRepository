@@ -82,7 +82,6 @@
             }
         }
 
-
         public Paginate(IPaginate<TSource> source, Func<IEnumerable<TSource>, IEnumerable<TResult>> converter)
         {
             Index = source.Index;

@@ -11,13 +11,13 @@ namespace DataAccess.Repositories
         where TEntity : BaseEntity
         where TContext : DbContext
     {
-
         protected TContext Context { get; set; }
 
         public Repository(TContext context)
         {
-            Context= context;
+            Context = context;
         }
+
         public TEntity Add(TEntity entity)
         {
             Context.Entry(entity).State = EntityState.Added;
@@ -44,7 +44,7 @@ namespace DataAccess.Repositories
 
         public TEntity Delete(TEntity entity)
         {
-            Context.Entry(entity).State= EntityState.Deleted;
+            Context.Entry(entity).State = EntityState.Deleted;
             Context.SaveChanges();
             return entity;
         }
@@ -60,7 +60,7 @@ namespace DataAccess.Repositories
         {
             var query = Query();
             if (includes.Any())
-                query = includes.Aggregate(query,(current, expression) => current.Include(expression));
+                query = includes.Aggregate(query, (current, expression) => current.Include(expression));
 
             var entity = query.FirstOrDefault(predicate);
 
@@ -69,20 +69,18 @@ namespace DataAccess.Repositories
 
             Context.Entry(entity).State = EntityState.Detached;
             return entity;
-
         }
 
         public async Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, params Expression<Func<TEntity, object>>[] includes)
         {
             var query = Query();
             if (includes.Any())
-                query = includes.Aggregate(query,(current,expression)=> current.Include(expression));
+                query = includes.Aggregate(query, (current, expression) => current.Include(expression));
             var entity = await query.FirstOrDefaultAsync(predicate);
             if (entity == null)
                 return null;
-            Context.Entry(entity).State= EntityState.Detached;
+            Context.Entry(entity).State = EntityState.Detached;
             return entity;
-          
         }
 
         public async Task<IList<TEntity>> GetFullListAsync(Expression<Func<TEntity, bool>>? predicate = null, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, bool enableTracking = true, CancellationToken cancellationToken = default)
@@ -90,17 +88,17 @@ namespace DataAccess.Repositories
             IQueryable<TEntity> queryable = Query();
             if (!enableTracking) queryable = queryable.AsNoTracking();
             if (include != null) queryable = include(queryable);
-            if(predicate != null) queryable = queryable.Where(predicate);
-            if(orderBy != null)
+            if (predicate != null) queryable = queryable.Where(predicate);
+            if (orderBy != null)
                 return await orderBy(queryable).ToListAsync(cancellationToken);
-            return await queryable.ToListAsync(cancellationToken);  
+            return await queryable.ToListAsync(cancellationToken);
         }
 
         public async Task<IPaginate<TEntity>> GetList(Expression<Func<TEntity, bool>>? predicate = null, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool enableTracking = true)
         {
             IQueryable<TEntity> queryable = Query();
-            if(!enableTracking) queryable = queryable.AsNoTracking();
-            if(include != null) queryable = include(queryable);
+            if (!enableTracking) queryable = queryable.AsNoTracking();
+            if (include != null) queryable = include(queryable);
             if (predicate != null) queryable = queryable.Where(predicate);
             if (orderBy != null)
                 return orderBy(queryable).ToPaginate(index, size);
@@ -117,7 +115,6 @@ namespace DataAccess.Repositories
                 return await orderBy(queryable).ToPaginateAsync(index, size, 0, cancellationToken);
             return await queryable.ToPaginateAsync(index, size, 0, cancellationToken);
         }
-        
 
         public async Task<IPaginate<TEntity>> GetListByDynamic(Dynamic.Dynamic dynamic, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool enableTracking = true)
         {
@@ -153,7 +150,5 @@ namespace DataAccess.Repositories
             await Context.SaveChangesAsync();
             return entity;
         }
-
-        
     }
 }
